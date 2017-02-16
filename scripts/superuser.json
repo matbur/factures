@@ -1,0 +1,20 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$30000$DIr9VP0G2zrE$wBU/bA8B70HXfoPZFGp8R/Sw3QU62YLWKI/Fm4ZRqgk=",
+      "last_login": null,
+      "is_superuser": true,
+      "username": "matbur",
+      "first_name": "Mateusz",
+      "last_name": "Burniak",
+      "email": "mat@bur.pl",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2017-02-15T23:16:40.880Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  }
+]
