@@ -1,23 +1,34 @@
 from operator import mul
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import ugettext_lazy
 
 
 class Contractor(models.Model):
     name = models.CharField(max_length=50)
     address1 = models.CharField(max_length=50)
     address2 = models.CharField(max_length=50)
-    NIP = models.CharField(max_length=10)
+    NIP = models.CharField(max_length=10, unique=True)
 
-    def validate_nip(self, nip):
+    def save(self, *args, **kwargs):
+        if not self.validate_nip(self.NIP):
+            raise ValidationError(
+                ugettext_lazy('NIP: %(nip) is incorrect'),
+                params={'nip': self.NIP}
+            )
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def validate_nip(nip):
         nip = nip.replace('-', '')
         if len(nip) != 10 or not nip.isdigit():
             return False
         *digits, crc = map(int, nip)
-        wages = (6, 5, 7, 2, 3, 4, 5, 6, 7)
-        check_sum = sum(map(mul, digits, wages))
-        return check_sum % 11 != crc
+        weights = (6, 5, 7, 2, 3, 4, 5, 6, 7)
+        check_sum = sum(map(mul, digits, weights))
+        return check_sum % 11 == crc
 
     def __str__(self):
         return '{}, NIP:{}'.format(self.name, self.NIP)
@@ -42,7 +53,32 @@ class Line(models.Model):
     amount = models.PositiveSmallIntegerField(default=1)
     tax = models.PositiveSmallIntegerField(default=23)
 
+    class Meta:
+        unique_together = ['invoice', 'description']
+
+    def calculate_net(self):
+        return round(self.price * self.amount, 2)
+
+    def calculate_gross(self):
+        return round(self.calculate_net() * (1 + self.tax / 100), 2)
+
     def __str__(self):
         return '{}: ({} + {}%) * {}'.format(
             self.description, self.price, self.tax, self.amount
         )
+
+
+def get_net(self):
+    l = Line.objects.filter(invoice=self)
+    s = sum(i.calculate_net() for i in l)
+    return round(s, 2)
+
+
+def get_gross(self):
+    l = Line.objects.filter(invoice=self)
+    s = sum(i.calculate_gross() for i in l)
+    return round(s, 2)
+
+
+Invoice.get_net = get_net
+Invoice.get_gross = get_gross
