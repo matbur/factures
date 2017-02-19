@@ -13,13 +13,13 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
 class ContractorSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Contractor
-        fields = '__all__'
+        fields = ('name', 'address1', 'address2', 'NIP')
 
 
 class LineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Line
-        fields = ['description', 'price', 'amount', 'tax', 'net', 'gross']
+        fields = ('description', 'price', 'amount', 'tax', 'net', 'gross')
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
@@ -29,4 +29,4 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Invoice
-        fields = ['url', 'date', 'number', 'issuer', 'receiver', 'lines']
+        fields = ('url', 'date', 'number', 'issuer', 'receiver', 'lines')

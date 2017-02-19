@@ -1,9 +1,9 @@
-from operator import mul
-
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy
+
+from .validators import validate_nip
 
 
 class Contractor(models.Model):
@@ -13,22 +13,12 @@ class Contractor(models.Model):
     NIP = models.CharField(max_length=10, unique=True)
 
     def save(self, *args, **kwargs):
-        if not self.validate_nip(self.NIP):
+        if not validate_nip(self.NIP):
             raise ValidationError(
                 ugettext_lazy('NIP: %(nip) is incorrect'),
                 params={'nip': self.NIP}
             )
         super().save(*args, **kwargs)
-
-    @staticmethod
-    def validate_nip(nip):
-        nip = nip.replace('-', '')
-        if len(nip) != 10 or not nip.isdigit():
-            return False
-        *digits, crc = map(int, nip)
-        weights = (6, 5, 7, 2, 3, 4, 5, 6, 7)
-        check_sum = sum(map(mul, digits, weights))
-        return check_sum % 11 == crc
 
     def __str__(self):
         return '{}, NIP:{}'.format(self.name, self.NIP)
@@ -73,18 +63,20 @@ class Invoice(models.Model):
             )
         super().save(*args, **kwargs)
 
-    @property
     def lines(self):
-        return Line.objects.filter(invoice=self)
+        l = Line.objects.filter(invoice=self)
+        return l
 
     @property
     def total_net(self):
-        s = sum(i.net for i in self.lines)
+        l = Line.objects.filter(invoice=self)
+        s = sum(i.net for i in l)
         return round(s, 2)
 
     @property
     def total_gross(self):
-        s = sum(i.gross for i in self.lines)
+        l = Line.objects.filter(invoice=self)
+        s = sum(i.gross for i in l)
         return round(s, 2)
 
     def __str__(self):
