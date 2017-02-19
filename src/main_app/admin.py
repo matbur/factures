@@ -13,7 +13,7 @@ class LineInline(admin.TabularInline):
 
 class InvoiceAdmin(admin.ModelAdmin):
     inlines = [LineInline]
-    list_display = ['date', 'number', 'issuer', 'receiver', 'get_net', 'get_gross']
+    list_display = ['date', 'number', 'issuer', 'receiver', 'total_net', 'total_gross']
     list_display_links = ['number']
     list_filter = ['date']
 

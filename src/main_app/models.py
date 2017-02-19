@@ -35,7 +35,7 @@ class Contractor(models.Model):
 
 
 class Line(models.Model):
-    invoice = models.ForeignKey('Invoice')
+    invoice = models.ForeignKey('Invoice', related_name='lines')
     description = models.CharField(max_length=100)
     price = models.FloatField()
     amount = models.PositiveSmallIntegerField(default=1)
@@ -44,11 +44,15 @@ class Line(models.Model):
     class Meta:
         unique_together = ['invoice', 'description']
 
-    def calculate_net(self):
-        return round(self.price * self.amount, 2)
+    @property
+    def net(self):
+        n = self.price * self.amount
+        return round(n, 2)
 
-    def calculate_gross(self):
-        return round(self.calculate_net() * (1 + self.tax / 100), 2)
+    @property
+    def gross(self):
+        g = self.net * (1 + self.tax / 100)
+        return round(g, 2)
 
     def __str__(self):
         return '{}: ({} + {}%) * {}'.format(
@@ -69,18 +73,19 @@ class Invoice(models.Model):
             )
         super().save(*args, **kwargs)
 
-    def get_net(self):
-        l = Line.objects.filter(invoice=self)
-        s = sum(i.calculate_net() for i in l)
-        return round(s, 2)
-
-    def get_gross(self):
-        l = Line.objects.filter(invoice=self)
-        s = sum(i.calculate_gross() for i in l)
-        return round(s, 2)
-
-    def get_lines(self):
+    @property
+    def lines(self):
         return Line.objects.filter(invoice=self)
+
+    @property
+    def total_net(self):
+        s = sum(i.net for i in self.lines)
+        return round(s, 2)
+
+    @property
+    def total_gross(self):
+        s = sum(i.gross for i in self.lines)
+        return round(s, 2)
 
     def __str__(self):
         return '#{} on {} from {} to {}'.format(
