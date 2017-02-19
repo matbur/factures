@@ -1,7 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy
 
 from .validators import validate_nip
 
@@ -14,14 +13,11 @@ class Contractor(models.Model):
 
     def save(self, *args, **kwargs):
         if not validate_nip(self.NIP):
-            raise ValidationError(
-                ugettext_lazy('NIP: %(nip) is incorrect'),
-                params={'nip': self.NIP}
-            )
+            raise ValidationError(f'NIP: {self.NIP} is incorrect')
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return '{}, NIP:{}'.format(self.name, self.NIP)
+        return f'{self.name}({self.NIP})'
 
 
 class Line(models.Model):
@@ -45,22 +41,25 @@ class Line(models.Model):
         return round(g, 2)
 
     def __str__(self):
-        return '{}: ({} + {}%) * {}'.format(
-            self.description, self.price, self.tax, self.amount
-        )
+        return f'{self.description}: ({self.price} + {self.tax}%) * {self.amount}'
 
 
 class Invoice(models.Model):
+    def get_next_number(self=None):
+        num = Invoice.objects.filter(
+            date__month=timezone.now().month,
+            date__year=timezone.now().year
+        ).count()
+        return num + 1
+
     date = models.DateField(default=timezone.now)
-    number = models.PositiveIntegerField()
+    number = models.PositiveIntegerField(default=get_next_number)
     issuer = models.ForeignKey(Contractor, related_name='issuer')
     receiver = models.ForeignKey(Contractor, related_name='receiver')
 
     def save(self, *args, **kwargs):
         if self.issuer == self.receiver:
-            raise ValidationError(
-                ugettext_lazy('Issuer and receiver cannot be the same'),
-            )
+            raise ValidationError('Issuer and receiver cannot be the same')
         super().save(*args, **kwargs)
 
     def lines(self):
@@ -80,6 +79,4 @@ class Invoice(models.Model):
         return round(s, 2)
 
     def __str__(self):
-        return '#{} on {} from {} to {}'.format(
-            self.number, self.date, self.issuer, self.receiver
-        )
+        return f'#{self.number} on {self.date} from {self.issuer} to {self.receiver}'
