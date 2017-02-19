@@ -34,20 +34,8 @@ class Contractor(models.Model):
         return '{}, NIP:{}'.format(self.name, self.NIP)
 
 
-class Invoice(models.Model):
-    date = models.DateField(default=timezone.now)
-    number = models.PositiveIntegerField()
-    issuer = models.ForeignKey(Contractor, related_name='issuer')
-    receiver = models.ForeignKey(Contractor, related_name='receiver')
-
-    def __str__(self):
-        return '#{} on {} from {} to {}'.format(
-            self.number, self.date, self.issuer, self.receiver
-        )
-
-
 class Line(models.Model):
-    invoice = models.ForeignKey(Invoice)
+    invoice = models.ForeignKey('Invoice')
     description = models.CharField(max_length=100)
     price = models.FloatField()
     amount = models.PositiveSmallIntegerField(default=1)
@@ -68,17 +56,33 @@ class Line(models.Model):
         )
 
 
-def get_net(self):
-    l = Line.objects.filter(invoice=self)
-    s = sum(i.calculate_net() for i in l)
-    return round(s, 2)
+class Invoice(models.Model):
+    date = models.DateField(default=timezone.now)
+    number = models.PositiveIntegerField()
+    issuer = models.ForeignKey(Contractor, related_name='issuer')
+    receiver = models.ForeignKey(Contractor, related_name='receiver')
 
+    def save(self, *args, **kwargs):
+        if self.issuer == self.receiver:
+            raise ValidationError(
+                ugettext_lazy('Issuer and receiver cannot be the same'),
+            )
+        super().save(*args, **kwargs)
 
-def get_gross(self):
-    l = Line.objects.filter(invoice=self)
-    s = sum(i.calculate_gross() for i in l)
-    return round(s, 2)
+    def get_net(self):
+        l = Line.objects.filter(invoice=self)
+        s = sum(i.calculate_net() for i in l)
+        return round(s, 2)
 
+    def get_gross(self):
+        l = Line.objects.filter(invoice=self)
+        s = sum(i.calculate_gross() for i in l)
+        return round(s, 2)
 
-Invoice.get_net = get_net
-Invoice.get_gross = get_gross
+    def get_lines(self):
+        return Line.objects.filter(invoice=self)
+
+    def __str__(self):
+        return '#{} on {} from {} to {}'.format(
+            self.number, self.date, self.issuer, self.receiver
+        )
